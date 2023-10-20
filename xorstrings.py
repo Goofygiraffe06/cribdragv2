@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 ##########################
 # cribdrag - An interactive crib dragging tool
@@ -18,17 +18,20 @@ def sxor(s1,s2):
     # perform exclusive or on the ASCII code
     # then convert the result back to ASCII (chr)
     # merge the resulting array of characters as a string
-    return ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1,s2))
+
+    # Python3 Approach
+    # zip takes i element of both s1 and s2 and converts into a tuple .
+    # Using list comprehension which iterates each paired tuple and is feeded to the xor function
+    return bytes([a ^ b for a,b in zip(s1, s2)])
 
 parser = argparse.ArgumentParser(description='xorstrings is a utility which comes with cribdrag, the interactive crib dragging tool. xorstrings takes two ASCII hex encoded strings and XORs them together. This can be useful when cryptanalyzing ciphertext produced by the One Time Pad algorithm or a stream cipher when keys are reused, as one can XOR two ciphertexts together and then crib drag across the result, which is both plaintexts XORed together.')
 parser.add_argument('data1', help='Data encoded in an ASCII hex format (ie. ABC would be 414243)')
 parser.add_argument('data2', help='Data encoded in an ASCII hex format (ie. ABC would be 414243)')
 args = parser.parse_args()
 
-s1 = args.data1.decode('hex')
-s2 = args.data2.decode('hex')
+s1 = bytes.fromhex(args.data1)
+s2 = bytes.fromhex(args.data2)
 
 s3 = sxor(s1, s2)
 
-print s3.encode('hex')
-
+print(s3.hex())
