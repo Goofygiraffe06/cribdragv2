@@ -12,7 +12,11 @@
 import sys
 import re
 import argparse
+from beaupy import confirm, prompt, select
+from beaupy.spinners import *
+from rich.console import Console
 
+console = Console()
 def sxor(ctext,crib):    
 	# convert strings to a list of character pair tuples
     # go through each tuple, converting them to ASCII code (ord)
@@ -36,9 +40,9 @@ def print_linewrapped(text):
     text_len = len(text)
     for chunk in range(0,text_len,line_width):  # Replaced xrange with range
         if chunk > text_len-line_width:
-            print(str(chunk) + chr(9) + text[chunk:])  
+            console.print(str(chunk) + chr(9) + text[chunk:])  
         else:
-            print(str(chunk) + chr(9) + text[chunk:chunk+line_width])  
+            console.print(str(chunk) + chr(9) + text[chunk:chunk+line_width])  
 
 parser = argparse.ArgumentParser(description='cribdrag, the interactive crib dragging script, allows you to interactively decrypt ciphertext using a cryptanalytic technique known as "crib dragging". This technique involves applying a known or guessed part of the plaintext (a "crib") to every possible position of the ciphertext. By analyzing the result of each operation and the likelihood of the result being a successful decryption based on the expected format and language of the plaintext one can recover the plaintext by making educated guesses and adaptive application of the crib dragging technique.')
 parser.add_argument('ciphertext', help='Ciphertext, encoded in an ASCII hex format (ie. ABC would be 414243)')
@@ -55,47 +59,59 @@ charset = '^[' + args.charset + ']+$'
 response = ''
 
 while response != 'end':
-    print("Your message is currently:")  
+    console.print("Your message is currently:")
     print_linewrapped(display_ctext)
-    print("Your key is currently:")  
+    console.print("Your key is currently:")
     print_linewrapped(display_key)
 
-    crib = input("Please enter your crib: ")  # Replaced raw_input with input
+    crib = prompt("Please enter your crib:")
     crib_len = len(crib)
 
     results = sxor(ctext, crib)
     results_len = len(results)
 
-    # Generate results
-    for result_index in range(results_len):  
+    for result_index in range(results_len):
         if re.search(charset, results[result_index]):
-            print('*** ' + str(result_index) + ': "' + results[result_index] + '"')  
+            console.print(f'[green]{result_index}: "{results[result_index]}"[/green]')
         else:
-            print(str(result_index) + ': "' + results[result_index] + '"')  
+            console.print(f'{result_index}: "{results[result_index]}"')
 
-    response = input("Enter the correct position, 'none' for no match, or 'end' to quit: ")  
+    response = prompt("Enter the correct position, 'none' for no match, or 'end' to quit:")
 
-    # Replace part of the message or key
+    spinner = Spinner(DOTS, "XORing to void...")
+
     try:
-        response = int(response)
-        if response < results_len:
-            message_or_key = ''
-            while message_or_key != 'message' and message_or_key != 'key':
-                message_or_key = input("Is this crib part of the message or key? Please enter 'message' or 'key': ")  # Replaced raw_input with input
-                if message_or_key == 'message':
-                    display_ctext = display_ctext[:response] + crib + display_ctext[response+crib_len:]
-                    display_key = display_key[:response] + results[response] + display_key[response+crib_len:]
-                elif message_or_key == 'key':
-                    display_key = display_key[:response] + crib + display_key[response+crib_len:]
-                    display_ctext = display_ctext[:response] + results[response] + display_ctext[response+crib_len:]
+        if response:
+            spinner.start()
+            try:
+                response = int(response)
+                if 0 <= response < results_len:
+                    message_or_key = ''
+                    while message_or_key not in ['message', 'key']:
+                        console.print("Is this crib part of the message or key? Please enter 'message' or 'key': ")
+                        message_or_key = select(['message', 'key'], cursor='X')
+                        if message_or_key == 'message':
+                            display_ctext = display_ctext[:response] + crib + display_ctext[response+crib_len:]
+                            display_key = display_key[:response] + results[response] + display_key[response+crib_len:]
+                        elif message_or_key == 'key':
+                            display_key = display_key[:response] + crib + display_key[response+crib_len:]
+                            display_ctext = display_ctext[:response] + results[response] + display_ctext[response+crib_len:]
+                    spinner.stop()
                 else:
-                    print('Invalid response. Try again.')  
-
-    except ValueError:
-        if response == 'end':
-            print("Your message is: " + display_ctext)  
-            print("Your key is: " + display_key)  
-        elif response == 'none':
-            print("No changes made.")  
+                    console.print("[red]Response index out of bounds![/red]")
+            except ValueError:
+                if response == 'end':
+                    console.print(f"Your message is: [bold]{display_ctext}[/bold]")
+                    console.print(f"Your key is: [bold]{display_key}[/bold]")
+                elif response == 'none':
+                    console.print("No changes made.")
+                else:
+                    console.print("[red]Invalid entry. Not an integer.[/red]")
+                spinner.stop()
         else:
-            print("Invalid entry.")  
+            console.print("[red]No data inputed![/red]")
+            spinner.stop()
+
+    except Exception as e:
+        spinner.stop()
+        console.print(f"[red]An error occurred: {e}[/red]")
