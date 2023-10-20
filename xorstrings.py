@@ -11,6 +11,12 @@
 
 import sys
 import argparse
+from beaupy import confirm, prompt, select
+from beaupy.spinners import *
+from rich.console import Console    
+import time
+
+console = Console()
 
 def sxor(s1,s2):    
     # convert strings to a list of character pair tuples
@@ -22,7 +28,11 @@ def sxor(s1,s2):
     # Python3 Approach
     # zip takes i element of both s1 and s2 and converts into a tuple .
     # Using list comprehension which iterates each paired tuple and is feeded to the xor function
-    return bytes([a ^ b for a,b in zip(s1, s2)])
+    spinner = Spinner(DOTS, "Crunching Hexadecimals...")
+    spinner.start()
+    res = bytes([a ^ b for a,b in zip(s1, s2)])
+    spinner.stop()
+    return res
 
 parser = argparse.ArgumentParser(description='xorstrings is a utility which comes with cribdrag, the interactive crib dragging tool. xorstrings takes two ASCII hex encoded strings and XORs them together. This can be useful when cryptanalyzing ciphertext produced by the One Time Pad algorithm or a stream cipher when keys are reused, as one can XOR two ciphertexts together and then crib drag across the result, which is both plaintexts XORed together.')
 parser.add_argument('data1', help='Data encoded in an ASCII hex format (ie. ABC would be 414243)')
@@ -34,4 +44,7 @@ s2 = bytes.fromhex(args.data2)
 
 s3 = sxor(s1, s2)
 
-print(s3.hex())
+if s3:
+    console.print(f"[green]{s3.hex()}[/green]")
+else:
+    console.print(f"[red]An error occured![/red]")
